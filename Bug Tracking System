@@ -1,0 +1,699 @@
+import pymysql as sql
+import pandas as pd
+import sys
+con=sql.connect(host="localhost",user="root",password="SqlLUCIFER1#",database="final_project",charset="utf8")
+
+def Type_of_user(user,passw):
+        cur=con.cursor()
+        qry="select Role,empName from employees where empCode=%s and empPassword=%s"   
+        cur.execute(qry,(user,passw,))
+        Role=cur.fetchone()
+        try:
+         if Role[0]=="Admin":
+             print(f"\n--->> Welcome {Role[0]} {Role[1]} <<---\n")
+             Admin_account()
+         elif Role[0]=="Manager":
+            print(f"\n--->> Welcome {Role[0]} {Role[1]} <<---\n")
+            Manager_Account(user)
+         else:
+            print(f"\n--->> Welcome {Role[0]} {Role[1]} <<---")
+            Employee_Account(Role[0])
+        except ValueError:
+            print("\n-->No Such User Found!!\n-->Try Again\n")
+            username=int(input("Enter your user ID="))
+            password=input("Enter your password=")
+            Type_of_user(username,password)
+        else:
+            pass
+        
+
+
+def Admin_account():
+    print("-> Enter your choice:")
+    print("1.Access Manager Data.\n2.Access Employee Data.\n3.View All Project.\n4.View Bug's Report.\n5.Exit\n")
+    choice=int(input("Enter your choice="))
+    if choice==1:
+        Manager_Data()
+    elif choice==2:
+        Employee_Data()
+    elif choice==3:
+        View_all_projects()
+    elif choice==4:
+        View_Bugreports()
+    else:
+        print("\n--->>>Thank You For Using Bug Tracking System.<<<---\n")
+        sys.exit()
+
+def Manager_Account(id):
+ try:
+     print("-> Enter your choice:")
+     print("\n1.Update your details.\n2.Manage Project.\n3.To work on Bugs Panel.\n4.Exit\n")
+     choice=int(input("Enter your choice="))
+     if choice==1:
+        Update_Data(1)
+     elif choice==2:
+        Project_Panel()
+     elif choice==3:
+        Bug_Panel()
+     else:
+        print("\n--->>>Thank You For Using Bug Tracking System.<<<---\n")
+        sys.exit()
+ except ValueError:
+     print("Please enter valid choices!!")
+     Manager_Account(id)
+
+def Employee_Account(role):
+    try:
+         print("-> Enter your choice:")
+         print("\n0. Exit.\n1. Update profile.\n2. View Bugs.\n3. Bug's Details.\n4. Update Bug Status.")
+         if role=="Tester":
+             print("5. Add Bug's report.\n")
+         choice=int(input("Enter your choice="))
+         if choice==1:
+             Update_Data(2)
+         elif choice==2:
+             View_All_Bugs()
+         elif choice==3:
+             Bug_Details()
+         elif choice==4:
+             Bug_status()
+         elif choice==5:
+             Add_Bug()
+         else:
+             print("\n--->>>Thank You For Using Bug Tracking System.<<<---\n")
+             sys.exit()
+    except ValueError:
+        print("Invalid input. Please enter a valid integer for choice.")
+        sys
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+
+def Bug_status():
+    try:
+              cur=con.cursor()
+              bgcode=input("Enter BugCode to update it's Status=")
+              qry="select bugCode from bugreport where bugCode=%s"
+              cur.execute(qry,(bgcode))
+              if cur.rowcount==0:
+                  print("\nRecord Not Found!!\n")
+                  Bug_status()
+              st=input("Enter Bug's new Status=")
+              qry="update bugreport set status=%s where bugCode=%s"
+              cur.execute(qry,(st,bgcode,))
+              con.commit()
+              if cur.rowcount!=0:
+                  print("\nStatus Updated Successfully!!\n")
+                  Employee_Account("Developer")
+              else:
+                  print("\nFailed to update Status!!\n")
+                  Bug_status()
+              con.close()
+    except ValueError:
+        print("Invalid input. Please enter a valid input.")
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+
+def Bug_Details():
+ try:
+    qry="select * from bugreport"
+    data=pd.read_sql(qry,con)
+    reports=data["bugDes"]
+    print("Bug's Details:")
+    print(reports)
+ except ValueError:
+        print("Invalid input. Please enter a valid input.")
+ except Exception as e:
+        print(f"Error occurred: {str(e)}")
+        
+def Bug_Panel():
+ try:
+  print("---> Welcome To The Bugs Panel<---\n\nWhich of the following operation you want to perform ?\n1.Add a New Bug.\n2.View all Bugs.\n3.Update Bug.\n4.Delete Bug.\n5.To go back.\n")
+  choice=int(input("Enter your choice="))
+  if choice==1:
+        Add_Bug()
+  elif choice==2:
+        View_All_Bugs()
+  elif choice==3:
+        Update_Bug()
+  elif choice==4:
+        Delete_Bug()
+  else:
+        Manager_Account()
+ except ValueError:
+        print("Invalid input. Please enter a valid integer for choice.")
+
+def Add_Bug():
+ try:
+    bugNo=int(input("Enter the Bug Number="))
+    bugCode=int(input("Enter the Bug Code="))
+    PId=int(input("Enter the Project Id="))
+    TCode=int(input("Enter the Tester Code="))
+    Ecode=int(input("Enter the Employee Code, in whoes project this Bug occured="))
+    Status=input("Enter the Bug Status(i.e. Pending or Resolved)=")
+    bugDes=input("Enter the Bug Description=")
+    qry="insert into bugreport values(%s,%s,%s,%s,%s,%s,%s)"
+    cur=con.cursor()
+    cur.execute(qry,(bugNo,bugCode,PId,TCode,Ecode,Status,bugDes,))
+    con.commit()
+    con.close()
+    if cur.rowcount==1:
+        print("\nBug Added Successfully!!\n")
+        Bug_Panel()
+    else:
+        print("\nFailed To Add Data!!\n")
+    Bug_Panel()
+ except ValueError:
+        print("Invalid input. Please enter a valid input.")
+ except Exception as e:
+        print(f"Error occurred: {str(e)}")
+        
+def Update_Bug():
+    try:
+            cur=con.cursor()
+            bugno=input("Enter the Bug Number=")
+            qry=f"select bugCode from bugreport where bugNo={bugno}"
+            cur.execute(qry)
+            if cur.rowcount==0:
+                print("\nBug Record Not Found!!")
+                Update_Bug()
+            print("-> Press 1 to update Bug Code.")
+            print("-> Press 2 to update Project Id.")
+            print("-> Press 3 to update Tester Code.")
+            print("-> Press 4 to update Employee Code.")
+            print("-> Press 5 to update Status.")
+            print("-> Press 6 to update Bug Description.")
+            print("-> Press 7 to update Multiple Details.")
+            print("-> Press 8 to go Back.")
+            ch = int(input("Enter your choice="))
+            if ch == 1:
+                BugCode=int(input("Enter new Bug Code="))
+                qry = f"update bugreport set bugCode={BugCode} where bugNo={bugno}"
+            elif ch == 2:
+                pID=int(input("Enter new Project Id="))
+                qry = f"update bugreport set projectID={pID} where bugNo={bugno}"
+            elif ch == 3:
+                TCode=int(input("Enter new Tester Code="))
+                qry = f"update bugreport set TCode={TCode} where bugNo={bugno}"
+            elif ch == 4:
+                ECode=int(input("Enter new Employee Code="))
+                qry = f"update bugreport set Ecode={ECode} where bugNo={bugno}"
+            elif ch == 5:
+                Status=input("Enter new Status=")
+                qry = f"update bugreport set status='{Status}' where bugNo={bugno}"
+            elif ch == 6:
+                BugDes=input("Enter new Bug Description=")
+                qry = f"update bugreport set bugDes='{BugDes}' where bugNo={bugno}"
+            elif ch==8:
+                Bug_Panel()
+            elif ch==7:
+                BugCode=int(input("Enter new Bug Code="))
+                pID=int(input("Enter new Project Id="))
+                TCode=int(input("Enter new Tester Code="))
+                ECode=int(input("Enter new Employee Code="))
+                Status=input("Enter new Status=")
+                BugDes=input("Enter new Bug Description=")
+                try:
+                 qry = f"UPDATE bugreport SET bugCode={BugCode}, projectID={pID}, TCode={TCode}, Ecode={ECode}, status='{Status}', bugDes='{BugDes}' WHERE bugNo={bugno}"
+                except ValueError:
+                    print("Invalid Data was entered!!")
+                    Update_Bug()
+            cur.execute(qry)
+            con.commit()
+            con.close()
+            if cur.rowcount!=0:
+                print("\nBug was updated successfully!!\n")
+            else:
+                print("\nBug was not updated!!\n")
+                
+    except ValueError:
+        print("Invalid input. Please enter a valid integer for employee id or choice.")
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")   
+
+def Delete_Bug():
+    try:
+         cur = con.cursor()
+         bugno=int(input("Enter the number of the bug which you want to delete="))
+         qry=f"select bugCode from bugreport where bugNo={bugno}"
+         cur.execute(qry)
+         if cur.rowcount==0:
+                print("\nBug Record Not Found!!")
+                Delete_Bug()
+         qry = f"delete from bugreport where bugNo={bugno}"
+         print(f"\nWARNING!!! You are going to delete bug no.{bugno} bug permanentaly, Kindly type 'DELETE' to confirm and to cancel the operation type 'CANCEL'.")
+         choice=input("Enter your choice=")
+         if choice=="DELETE" or choice=="delete":
+             cur.execute(qry)
+             con.commit()
+             con.close()
+             if cur.rowcount!=0:
+              print("\nBug deleted successfully!!\n")
+              Bug_Panel()
+         else:
+            print("\nBug was not deleted!!\n")
+            Bug_Panel()
+    except ValueError:
+        print("Invalid input. Please enter a valid number for Bug number.")
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+ 
+def View_All_Bugs():
+    qry="select * from bugtype"
+    data=pd.read_sql(qry,con)
+    print(data)
+ 
+def View_Bugreports():
+    qry=f"select * from bugreport"
+    data=pd.read_sql(qry,con)
+    print(data)
+    Admin_account()
+
+def Project_Panel():
+    try:
+        print("\n-> Enter your choice:")
+        print("\n1.Add Project.\n2.View All Projects.\n3.Delete Project.\n4.Update Project\n")
+        ch=int(input("Enter your choice="))
+        if ch==1:
+            Add_Project()
+        elif ch==2:
+            View_all_projects()
+        elif ch==3:
+            Delete_Project()
+        else:
+            Update_Project()
+    except ValueError:
+        print("Invalid input. Please enter a valid input for choices.")
+        Project_Panel()
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+
+def Add_Project():
+    try:
+        PId=int(input("Enter the Project Id="))
+        Pname=input("Enter the Project Name=")
+        sdate=input("Enter the starting date of the Project=")
+        edate=input("Enter the ending date of the Project=")
+        PDes=input("Enter the Project Description=")
+        qry="insert into project values(%s,%s,%s,%s,%s)"
+        print("\n")
+        cur=con.cursor()
+        cur.execute(qry,(PId,Pname,sdate,edate,PDes,))
+        con.commit()
+        id=int(input("Enter the employee code to whom you want to assign the project="))
+        qry="insert into assignproject values(%s,%s)"
+        cur.execute(qry,(PId,id,))
+        con.commit()
+        con.close()
+        if cur.rowcount!=0:
+          print("\nProject Added Successfully!!\n")
+          Project_Panel()
+        else:
+         print("\nFailed To Add Data!!\n")
+         Project_Panel()
+    except ValueError:
+        print("Invalid input. Please enter a valid integer for input.")
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+        
+def Delete_Project():
+    try:
+         cur = con.cursor()
+         PId=int(input("Enter the Project Id of the project which you want to delete="))
+         qry=f"select projectID from project where projectID={PId}"
+         cur.execute(qry)
+         if cur.rowcount==0:
+                print("\nProject Record Not Found!!\n")
+                Delete_Project()
+         qry="delete from project where projectID=%s"
+         qry2="select projectName from project where projectID=%s"
+         cur.execute(qry2,(PId,))
+         data=cur.fetchone()
+         print(f"\nWARNING!!! You are going to delete Project:{data[0]} permanentaly, Kindly type 'DELETE' to confirm and to cancel the operation type 'CANCEL'.")
+         choice=input("Enter your choice=")
+         if choice=="DELETE" or choice=="delete":
+             cur.execute(qry,(PId,))
+             con.commit()
+             con.close()
+             if cur.rowcount!=0:
+              print("\nProject was deleted successfully!!\n")
+              Project_Panel()
+         else:
+            print("\nProject was not deleted!!\n")
+            Project_Panel() 
+    except ValueError:
+        print("Invalid input. Please enter a valid integer for project id.")
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+
+def Update_Project():
+    try:
+        cur=con.cursor()
+        pid=input("Enter the Project Id=")
+        qry=f"select projectID from project where projectID={pid}"
+        cur.execute(qry)
+        if cur.rowcount==0:
+            print("\nProject Record Not Found!!\n")
+            Update_Project()
+        print("-> Press 1 to update Project Name.")
+        print("-> Press 2 to update Project's starting date.")
+        print("-> Press 3 to update Project's ending date.")
+        print("-> Press 4 to update Project Description.")
+        print("-> Press 5 to update Multiple Details.")
+        ch = int(input("Enter your choice="))
+        if ch == 1:
+                PName=input("Enter new Project Name=")
+                qry = f"update project set projectName={PName} where projectID={pid}"
+        elif ch == 2:
+                sdate=input("Enter new Project's starting date=")
+                qry = f"update project set sdate={sdate} where projectID={pid}"
+        elif ch == 3:
+                edate=input("Enter new Project's ending date=")
+                qry = f"update project set edate={edate} where projectID={pid}"
+        elif ch == 4:
+                pdes=input("Enter new Project's Description=")
+                qry = f"update project set projrctDec={pdes} where projectID={pid}"
+        else:
+             Pname=input("Enter the new Project Name=")
+             sdate=input("Enter the new starting date of the Project=")
+             edate=input("Enter the new ending date of the Project=")
+             PDes=input("Enter the new Project Description=")
+             try:
+                 qry = f"UPDATE project SET projectName='{Pname}',sdate='{sdate}',edate='{edate}',projectDec='{PDes}' WHERE projectID={pid}"
+             except ValueError:
+                    print("Invalid Data was entered!!")
+                    Update_Project()
+        cur.execute(qry)
+        con.commit()
+        con.close()
+        if cur.rowcount!=0:
+                print("\nProject was updated successfully!!\n")
+                Project_Panel()
+        else:
+                print("\nProject was not updated!!\n")
+                Update_Project()
+    except ValueError:
+        print("Invalid input. Please enter a valid input.")
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+
+def Employee_Data():
+    print("\n>Select what operation you want to perform:\n1.Add Employee's Account.\n2.View Employee's Account.\n3.Delete Employee's Account.\n4.Update Employee's Details.\n5.To go Back.\n")
+    choice=int(input("Enter your choice="))
+    if choice==1:
+        Add_Data(2)
+    elif choice==2:
+       print("If you want to view data of a specific employee enter '1' else if you want to view data of all employees press '2':")
+       ch=int(input("Enter your choice="))
+       if ch==1:
+           Display_Data(0,2,"Employee")
+       else:
+             Display_Data("All",2,"Employee")
+    elif choice==3:
+        Delete_Data()
+    elif choice==4:
+        Update_Data(2)
+    else:
+        Admin_account()
+    
+def Delete_Data():
+    try:
+        cur = con.cursor()
+        id=int(input("Enter the ID of the employee or manager of which you want to delete data="))
+        qry=f"select Role from employees where empCode={id}"
+        cur.execute(qry)
+        data=cur.fetchone()
+        if data[0]!="ADMIN":
+         qry = f"delete from employees where empCode={id}"
+         print("\nWARNING!!! You are going to delete this data permanentaly, Kindly type 'DELETE' to confirm and to cancel the operation type 'CANCEL'.")
+         choice=input("Enter your choice=")
+         if choice=="DELETE" or choice=="delete":
+             cur.execute(qry)
+             con.commit()
+             con.close()
+             if cur.rowcount == 1:
+              print("\nData deleted successfully!!\n")
+              Admin_account()
+         else:
+            print("\nData was not deleted!!\n")
+            Admin_account()
+        else:
+            print("\nCannot Delete Admin's Data!!")
+            Delete_Data()
+    except ValueError:
+        print("Invalid input. Please enter a valid integer for employee id.")
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+
+def Display_Data(uid,access,mrole):
+        if uid=="All":
+             if access==1:
+               erole="Manager"
+               qry= "select * from employees where role=%s"
+             else:
+                erole="Employee"
+                qry= "select * from employees where not role=%s and not role='Admin'"
+             cur = con.cursor()
+             cur.execute(qry,('Manager',))
+             print("\n")
+             for data in cur.fetchall():
+                 print(f"{erole}'s ID = {data[0]}")
+                 print(f"{erole}'s Name = {data[1]}")
+                 print(f"{erole}'s Email = {data[2]}")
+                 print(f"{erole}'s Password = {data[3]}")
+                 print(f"{erole}'s Gender = {data[4]}")
+                 print(f"{erole}'s Date Of Birth = {data[5]}")
+                 print(f"{erole}'s Mobile Number = {data[6]}")
+                 if access==2:
+                   print(f"{erole}'s role = {data[7]}")
+                 print("\n")
+             if mrole=='Manager':
+                 Manager_Account(uid)            
+             else:
+                Admin_account()
+        else:
+            if uid==0:
+              print(f"Enter the Id=",end="")  
+              uid=int(input())
+            try:
+             cur=con.cursor()
+             if access==1:
+               erole="Manager"
+               qry= "select * from employees where empcode=%s and role='Manager'"
+             else:
+                erole="Employee"
+                qry= "select * from employees where empcode=%s and not role='Manager'"    
+             cur.execute(qry,(uid,))
+             data=cur.fetchone()
+             if cur.rowcount != 0:
+               if data:
+                print("\n")
+                print(f"{erole}'s ID = {data[0]}")
+                print(f"{erole}'s Name = {data[1]}")
+                print(f"{erole}'s Email = {data[2]}")
+                print(f"{erole}'s Password = {data[3]}")
+                print(f"{erole}'s Gender = {data[4]}")
+                print(f"{erole}'s Date Of Birth = {data[5]}")
+                print(f"{erole}'s Mobile Number = {data[6]}")
+                if access==2:
+                  print(f"{erole}'s role = {data[7]}")
+                if erole=="Manager":
+                   print("\n")
+                   Manager_Account(uid)             
+                else:
+                  print("\n")
+                  Admin_account() 
+             else:
+              print("\nNo Record Found in Database!!")
+              if erole=="Manager":
+                   print("\n")
+                   Manager_Account()             
+              else:
+                  print("\n")
+                  Admin_account()
+            except Exception as e:
+              print(f"An error occurred: {e}")
+            
+def Manager_Data():
+     print("\nSelect what operation you want to perform:\n1.Add Manager's Account.\n2.View Manager's Account.\n3.Delete Manager's Account.\n4.Update Manager's Details.\n5.To go Back\n")
+     choice=int(input("Enter your choice="))
+     if choice==1:
+         Add_Data(1)
+     elif choice==2:
+         print("If you want to view data of a specific manager enter '1' else if you want to view data of all managers press '2':")
+         ch=int(input("Enter your choice="))
+         if ch==1:
+           id=int(input("Enter manager's Id="))
+           Display_Data(id,1,"Admin")
+         else:
+             Display_Data("All",1,"Admin")
+     elif choice==3:
+        Delete_Data()
+     elif choice==4:
+        Update_Data(1)
+     else:
+         Admin_account()
+
+def Add_Data(access):
+    if access==1:
+        print("Enter Manager's details:")
+        role="Manager"
+    elif access==2:
+        print("Enter Employee's details:")
+        role="Employee"
+    eid=int(input("Enter Id="))
+    name=input("Enter Name=")
+    email=input("Enter Email=")
+    password=input("Enter Password=")
+    gender=input("Enter Gender=")
+    dob=input("Enter Date Of Birth(format='YYYY-MM-DD')=")
+    mobileno=int(input("Enter Mobile Number="))
+    if access==2:
+        role=input("Enter Employee's role=")
+        qry="insert into employees values(%d,'%s','%s','%s','%s','%s',%d,'%s')"%(eid,name,email,password,gender,dob,mobileno,role)
+    else:
+      qry="insert into employees values(%d,'%s','%s','%s','%s','%s',%d)"%(eid,name,email,password,gender,dob,mobileno)
+    cur=con.cursor()
+    cur.execute(qry)
+    con.commit()
+    con.close()
+    if cur.rowcount==1:
+        print("\nData Added Successfully!!")
+        if access==1:
+          Manager_Data()
+        else:
+          Employee_Data()
+    else:
+        print("\nFailed To Add Data!!")
+    
+
+def Update_Data(access):
+    try:
+        cur=con.cursor()
+        if access==1:
+               erole="Manager"
+               print(f"Enter {erole}'s ID=",end="")
+               id = input()
+               qry=f"select Role from employees where empCode={id}"
+               cur.execute(qry)
+               data=cur.fetchone()
+               if data[0]=="Manager":
+                 cur.execute(f"select * from employees where empCode={id}")
+               else:
+                 print("Record Not Found!!")
+                 Update_Data(1)
+        else:
+               erole="Employee"
+               print(f"Enter {erole}'s ID=",end="")
+               id = input()
+               qry=f"select Role from employees where empCode={id}"
+               cur.execute(qry)
+               data=cur.fetchone()
+               if data[0]!="Manager":
+                 cur.execute(f"select * from employees where empCode={id}")
+               else:
+                 print("Record Not Found in Database!!")
+                 Update_Data(2)
+          
+        if cur.rowcount == 1:
+            print("-> Press 1 to update Name.")
+            print("-> Press 2 to update Email id.")
+            print("-> Press 3 to update Password.")
+            print("-> Press 4 to update Gender.")
+            print("-> Press 5 to update Date Of Birth.")
+            print("-> Press 6 to update Mobile Number.")
+            print("-> Press 7 to update Multiple Details.")
+            if access==2:
+             print("-> Press 8 to update Role.")
+            print("-> Press 'B' to go Back.")
+            ch =input("Enter your choice=")
+            if ch == 1:
+                print(f"Enter {erole}'s new Name=",end="")
+                name=input()
+                qry = f"update employees set empName='{name}' where empCode={id}"
+            elif ch == 4:
+                print(f"Enter {erole}'s new Gender=",end="")
+                gender=input()
+                qry = f"update employees set gender='{gender}' where empCode={id}"
+            elif ch == 2:
+                print(f"Enter {erole}'s new Email=",end="")
+                email=input()
+                qry = f"update employees set empEmail='{email}' where empCode={id}"
+            elif ch == 3:
+                print(f"Enter {erole}'s new Password=",end="")
+                password=input()
+                qry = f"update employees set empPassword='{password}' where empCode={id}"
+            elif ch == 5:
+                print(f"Enter {erole}'s new Date Of Birth=",end="")
+                dob=input()
+                qry = f"update employees set DOB='{dob}' where empCode={id}"
+            elif ch == 6:
+                print(f"Enter {role}'s new Mobile Number=")
+                mobno=int()
+                qry = f"update employees set mobileNo='{mobno}' where empCode={id}"
+            elif ch=='B'or ch=='b':
+                Admin_account()
+            elif ch==7:
+                print(f"Enter {erole}'s new Name=",end="")
+                name=input()
+                print(f"Enter {erole}'s new Gender=",end="")
+                gender=input()
+                print(f"Enter {erole}'s new Email=",end="")
+                email=input()
+                print(f"Enter {erole}'s new Password=",end="")
+                password=input()
+                print(f"Enter {erole}'s new Date Of Birth=",end="")
+                dob=input()
+                print(f"Enter {role}'s new Mobile Number=")
+                mobno=int()
+                if access==1:
+                  
+                  qry = f"update employees set empName='{name}',gender='{gender}',empEmail='{email}',empPassword='{password}',DOB='{dob}',mobileNo='{mobno}' where empCode={id}"
+                else:
+                  print(f"Enter Employee's Role=",end="")
+                  role=input()
+                  qry = f"update employees set empName='{name}',gender='{gender}',empEmail='{email}',empPassword='{password}',DOB='{dob}',mobileNo='{mobno}',Role='{role}' where empCode={id}"
+            if access==2 and ch==8:
+               print(f"Enter Employee's Role=",end="")
+               role=input()
+               qry=f"update employees set Role='{role}' where empCode={id}"
+            cur.execute(qry)
+            con.commit()
+            con.close()
+            if cur.rowcount == 1:
+               print("Record updated Succesfully!!")
+            else:
+                print("Failed to update!")
+        else:
+            print(f"Invalid {erole}'s id!!")
+    except ValueError:
+        print("Invalid input. Please enter a valid integer for employee id or choice.")
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+
+def View_all_projects():
+    print("Data of all Projects:\n")
+    qry=f"select * from project"
+    data=pd.read_sql(qry,con)
+    print(data,"\n\n")
+    try:
+      print("Employees assigned to projets:")
+      qry="select * from assignproject"
+      data=pd.read_sql(qry,con)
+      print(data)
+      
+    except:
+       print("No data!!")
+    print("Do you want to get information of these employees ?\n->Press '1' for 'Yes' and '2' for 'No'.")
+    choice=int(input("Enter your choice="))
+    if choice==1:
+       id=int(input("Enter employees Employee Code="))
+       Display_Data(id,2,'Admin')
+    else:
+       con.close()
+       sys.exit()
+       
+print("\nWelcome to the Bug Tracking System!!\n-> Please enter your 'User ID' and 'Password' to continue.\n")
+username=int(input("Enter your user ID="))
+password=input("Enter your password=")
+Type_of_user(username,password)
+
